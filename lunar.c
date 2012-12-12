@@ -4,30 +4,32 @@
 #include "vmode13h.h"
 #include "terrain.h"
 
-int loadship();
-void drawship(int, int);
-void scankb();
-void crash();
-void land();
+static int loadship(const char *);
+static void drawship(int, int);
+static void scankb();
+static void crash();
+static void land();
 
 /* globals */
-unsigned char ship[16][16];
-int x, y, z;
-int posx, posy;
-int px, py;
-int velx, vely;
-char exitflag;
-char crashflag;
+static unsigned char ship[16][16];
+static int posx, posy;
+static int px, py;
+static int velx, vely;
+static char exitflag;
+static char crashflag;
 
 
 int
-main(int argc, char **argv) {
+main() {
+    int x;
     char gravcount;
+    struct terrain *terrain;
 
-    if (loadterrain() != 0)
+    terrain = loadterrain("TERRAIN.DAT");
+    if (terrain == NULL)
         return (1);
 
-    if (loadship() != 0)
+    if (loadship("SHIP.DAT") != 0)
         return (1);
 
     initgraph();
@@ -69,12 +71,12 @@ main(int argc, char **argv) {
         }
 
         /* terrain collision checking */
-        if (posy > maxy - current_terrain.data[posx] - 7)
+        if (posy > maxy - terrain->data[posx] - 7)
             crash();
 
-        if (posy > maxy - current_terrain.data[posx] - 6) {
+        if (posy > maxy - terrain->data[posx] - 6) {
             for (x = -8; x <= 8; x++)
-                if (posy != maxy - current_terrain.data[posx + x] - 9)
+                if (posy != maxy - terrain->data[posx + x] - 9)
                     if (crashflag == 0)
                         land();
         }
@@ -86,32 +88,33 @@ main(int argc, char **argv) {
 
         /* graphics */
         drawship(posx, posy);
-        drawterrain();
+        drawterrain(terrain);
     }
     setmode(0x0003);
 
     return (0);
 }
 
-int
-loadship() {
-    FILE *sdata;
+static int
+loadship(const char *filename) {
+    int x, y;
+    FILE *fd;
 
-    if ((sdata = fopen("SHIP.DAT", "rb")) == NULL) {
-        fprintf(stderr, "Cannot open data file: SHIP.DAT\n");
+    if ((fd = fopen(filename, "rb")) == NULL) {
+        fprintf(stderr, "Cannot open data file: %s\n", filename);
         return (1);
     }
 
     for (y = 0; y < 16; y++)
         for (x = 0; x < 16; x++)
-            ship[x][y] = fgetc(sdata);
+            ship[x][y] = fgetc(fd);
 
-    fclose(sdata);
+    fclose(fd);
 
     return (0);
 }
 
-void
+static void
 drawship(int x, int y) {
     int u, v;
     char c;
@@ -129,7 +132,7 @@ drawship(int x, int y) {
         }
 }
 
-void
+static void
 crash() {
     px = 160 * 16;
     py = 44 * 16;
@@ -145,7 +148,7 @@ crash() {
     setmode(0x0013);
 }
 
-void
+static void
 land() {
     px = 160 * 16;
     py = 44 * 16;
@@ -161,7 +164,7 @@ land() {
     setmode(0x0013);
 }
 
-void
+static void
 scankb() {
     char a, b;
 
